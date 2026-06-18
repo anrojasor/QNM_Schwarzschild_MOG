@@ -19,9 +19,9 @@ def calculate_wkb_guess(l, alpha, perturbation_type="GRAVITATIONAL", M=0.5):
         (omega_real, omega_imag): Tupla con la semilla para la PINN.
     """
     
-    # 1. Definición de Constantes MOG (Corregidas dimensionalmente)
+    # 1. Definición de Constantes MOG 
     M_eff = M * (1.0 + alpha)
-    Qg_sq = alpha * (1.0 + alpha) * (M**2) # Esto equivale a Q_eff^2
+    Qg_sq = alpha * (1.0 + alpha) * (M**2) 
     
     # Parámetros geométricos para f(r)
     Coeff_B = 2.0 * M_eff
@@ -30,7 +30,7 @@ def calculate_wkb_guess(l, alpha, perturbation_type="GRAVITATIONAL", M=0.5):
     # Horizonte de eventos r+
     r_plus = M * (1.0 + alpha + np.sqrt(1.0 + alpha))
     
-    # 2. Selección de q_j (Parámetro de acople corregido)
+    # 2. Selección de q_j 
     mu_sq = (l - 1.0) * (l + 2.0)
     root_term = np.sqrt(9.0 * (M_eff**2) + 4.0 * Qg_sq * mu_sq)
     
@@ -93,7 +93,7 @@ def calculate_wkb_guess(l, alpha, perturbation_type="GRAVITATIONAL", M=0.5):
 
 
 
-# Configuración de dispositivo (GPU si está disponible)
+# Configuración de dispositivo 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float64)
 print(f"Usando dispositivo: {device}")
@@ -101,20 +101,15 @@ print(f"Usando dispositivo: {device}")
 # ==========================================
 # 1. Configuración del Problema (MOG Black Hole)
 # ==========================================
-# Parámetros físicos según el artículo (Sección 5, rescalado 2M=1)
-# Esto implica que M = 0.5 para los cálculos internos.
-# Los resultados finales se multiplicarán por 0.5 para comparar con la Tabla 2 (M=1).
+
 
 alpha_param = 1 # Cambiar a 0, 1, 4, 9 según se necesite
 l_param = 1    # Número cuántico de momento angular (l=2 gravitacional)
 
-perturbation_type_parameter = "ELECTROMAGNETIC" # Opciones: "ELECTROMAGNETIC" o "ELECTROMAGNETIC"
-#perturbation_type_parameter = "GRAVITATIONAL" # Opciones: "ELECTROMAGNETIC" o "ELECTROMAGNETIC"
+perturbation_type_parameter = "ELECTROMAGNETIC" # Opciones: "GRAVITATIONAL" o "ELECTROMAGNETIC"
 
 wr_init, wi_init = calculate_wkb_guess(l_param, alpha_param, perturbation_type_parameter, M=1.0)
-#wr_init, wi_init = 0.24819,  -0.09264
 
-# Constantes derivadas (Ec. 5.70, 5.71)
 # Nota: En unidades 2M=1, r+ y r- se calculan así:
 r_plus = 0.5 * (1 + alpha_param + np.sqrt(1 + alpha_param))
 r_minus = 0.5 * (1 + alpha_param - np.sqrt(1 + alpha_param))
@@ -154,8 +149,6 @@ class ComplexPINN(nn.Module):
                 nn.init.zeros_(m.bias)
 
         # La frecuencia compleja omega es un parámetro entrenable
-        # Inicialización cercana al valor esperado GR para l=2 (aprox 0.74 - 0.17i en unidades 2M=1)
-        # Para M=1 es 0.37 - 0.089i, así que multiplicamos por 2 para el código interno.
         self.omega_real = nn.Parameter(torch.tensor([wr_init*2], device=device))
         self.omega_imag = nn.Parameter(torch.tensor([wi_init*2], device=device))
 
@@ -218,7 +211,7 @@ def compute_loss(model, xi_batch):
     GZ_xi_imag = torch.autograd.grad(GZ_imag_sum, xi, create_graph=True)[0]
     
     # ==========================================
-    # SELECCIÓN DEL TIPO DE PERTURBACIÓN (CORREGIDO Y LIMPIO)
+    # SELECCIÓN DEL TIPO DE PERTURBACIÓN 
     # ==========================================
     PERTURBATION_TYPE = perturbation_type_parameter 
     r_val = r_plus / (one_minus_xi + 1e-8)
@@ -226,11 +219,11 @@ def compute_loss(model, xi_batch):
     A = l_param * (l_param + 1.0)
     mu_sq = (l_param - 1.0) * (l_param + 2.0)
     
-    # 1. Definiciones físicas generales (Asumiendo M=0.5 en tu entorno)
+    # 1. Definiciones físicas generales 
     M_eff = 0.5 * (1.0 + alpha_param)
     Qg_sq = alpha_param * (1.0 + alpha_param) * (0.5**2) 
     
-    # 2. Raíz para q_j usando torch.sqrt (Convertido explícitamente a Tensor)
+    # 2. Raíz para q_j usando torch.sqrt 
     interior_raiz = 9.0 * (M_eff**2) + 4.0 * Qg_sq * mu_sq
     # Convertimos a tensor flotante y lo enviamos al mismo dispositivo que xi
     interior_tensor = torch.tensor(interior_raiz, dtype=torch.float32, device=xi.device) 
@@ -420,7 +413,6 @@ def train_pinn():
 
     # ---------------------------------------------------------
     # Gráfico 2: Reconstrucción de la Onda Física Z(r)
-    # Basado en la Ec. (5.56) de Manfredi et al.
     # ---------------------------------------------------------
     def reconstruir_onda_fisica(r_vals, omega_complex, r_plus, r_minus, model):
         """
@@ -438,13 +430,13 @@ def train_pinn():
             chi_i = salida_r[:, 1].cpu().numpy().flatten()
             chi_complex = chi_r + 1j * chi_i
             
-        # Parámetro rho = -i * omega (Ec. 5.50)
+        # Parámetro rho = -i * omega
         rho = -1j * omega_complex
         
         # Diferencia de horizontes
         delta_r = r_plus - r_minus
         
-        # Exponentes de la Ec. 5.56
+        # Exponentes de la
         exp_minus = 1.0 - rho - (rho * r_plus**2) / delta_r
         exp_plus = (rho * r_plus**2) / delta_r
         
@@ -458,11 +450,9 @@ def train_pinn():
         return Z_complex
 
     # Generamos un grid uniforme en r, desde un poco afuera del horizonte hasta r_+ + 25
-    # (Para M=0.5, 25 unidades espaciales es suficiente para ver la oscilación completa)
     r_fisico = np.linspace(r_plus + 0.05, r_plus + 25.0, 1000)
     
-    # Recuperamos el omega INTERNO (escala 2M=1) directamente de la red para que 
-    # coincida con la física de la Ec. 5.56 entrenada.
+    # Recuperamos el omega INTERNO (escala 2M=1) directamente
     omega_interno = w_r.item() + 1j * w_i.item()
     
     Z_fisica = reconstruir_onda_fisica(r_fisico, omega_interno, r_plus, r_minus, model)
